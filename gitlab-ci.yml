@@ -1,0 +1,27 @@
+image: docker:stable
+stages:
+  - docker_build
+  - deploy_k8s
+variables:
+  KUBECONFIG: /etc/deploy/config
+docker_build_job:
+  image: docker:latest
+  stage: docker_build
+  tags:
+    - k8ss
+  script:
+    - echo "Login $CI_REGISTRY"
+    - docker login -u root -p GACjDbFhrBk4Z7_aPA4j localhost:5000
+    - docker build -t localhost:5000/root/gitlab-ci-k8s-demo/nginxt:$CI_PIPELINE_ID .
+    - docker push localhost:5000/root/gitlab-ci-k8s-demo/nginxt:$CI_PIPELINE_ID
+deploy_k8s_job:
+  image: roffe/kubectl
+  stage: deploy_k8s
+  tags:
+    - k8ss
+  script:
+    - mkdir -p /etc/deploy
+    - echo $kube_config |base64 -d > $KUBECONFIG
+    - sed -i "s/IMAGE_TAG/$CI_PIPELINE_ID/g" deployment.yaml
+    - cat deployment.yaml
+    - kubectl apply -f deployment.yaml
